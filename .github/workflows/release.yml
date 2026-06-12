@@ -1,0 +1,50 @@
+# metanorma/support — reusable release wrapper for metanorma-org gems.
+#
+# Insulates metanorma-org callers from interface drift in
+# metanorma/ci/rubygems-release.yml@main by adapting at this layer.
+# Mirrors relaton/support, fontist/support, lutaml/support patterns —
+# bringing metanorma org to parity with the other orgs that already
+# have this insulation.
+#
+# Callers pass only `rubygems-api-key`. `pat_token` is NOT forwarded:
+# this routes through the metanorma/ci no-PAT path (added 2026-06-11
+# in commits 2ddd8ecc + 965fb641) which publishes immediately with the
+# idempotent guard, avoiding the test→do-release relay flakiness.
+
+name: release
+
+on:
+  workflow_call:
+    inputs:
+      next_version:
+        description: |
+          Next release version. Possible values: x.y.z, major, minor, patch (or pre|rc|etc).
+          Also, you can pass 'skip' to skip 'git tag' and do 'gem push' for the current version
+        required: true
+        type: string
+      release_command:
+        description: 'command to release gem'
+        required: false
+        type: string
+        default: bundle exec rake release
+    secrets:
+      rubygems-api-key:
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: metanorma/ci/.github/workflows/rubygems-release.yml@main
+    with:
+      next_version: ${{ inputs.next_version }}
+      release_command: ${{ inputs.release_command }}
+    secrets:
+      rubygems-api-key: ${{ secrets.rubygems-api-key }}
